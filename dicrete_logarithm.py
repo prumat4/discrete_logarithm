@@ -14,52 +14,49 @@ def brute_force(a, b, p):
     
     return float('nan')
 
-def chinese_remainder_theorem(remainders, modulus):
-    product_of_modulus = 1
-    for mod in modulus:
-        product_of_modulus *= mod
+def chinese_remainder_theorem(remainders, modules):
+    product = 1
+    for module in modules:
+        product *= module
+    
+    result_sum = 0
+    for index, module in enumerate(modules):
+        partial_product = product // module
+        modular_inverse = pow(partial_product, -1, module)
+        result_sum += remainders[index] * modular_inverse * partial_product
 
-    total = 0
-    for i, (remainder, modulus) in enumerate(zip(remainders, modulus)):
-        partial_product = product_of_modulus // modulus
-        modular_inverse = pow(partial_product, -1, modulus)
-        contribution = remainder * modular_inverse * partial_product
-        total += contribution
+    return result_sum % product
 
-    return total % product_of_modulus
-
-
-def silver_pohlig_hellman(base, target, prime):
+def silver_pohlig_hellman(base, exponent, prime):
     phi = prime - 1
     prime_factors = factorint(phi)
-    exponent_table = {}
+    residue_table = {}
 
-    for factor, count in prime_factors.items():
-        exponent_table.update(
-            {(factor, pow(base, (phi * exp) // factor, prime)): exp
-             for exp in range(factor)}
-        )
+    for prime_factor, exp_power in prime_factors.items():
+        for power in range(prime_factor):
+            residue = pow(base, (phi * power) // prime_factor, prime)
+            residue_table[prime_factor, residue] = power
 
-    results = []
-    base_powers = [factor ** count for factor, count in prime_factors.items()]
+    x_results = []
+    factor_exponents = [prime_factor ** exp_power for prime_factor, exp_power in prime_factors.items()]
 
-    for factor, exponent in prime_factors.items():
-        current = 1
-        partial_result = 0
-        for exponent_index in range(exponent):
-            power = phi // (factor ** (exponent_index + 1))
-            adjusted_target = pow(target * pow(current, -1, prime), power, prime)
-            partial_exponent = exponent_table.get((factor, adjusted_target), 0)
-            partial_result += (partial_exponent * (factor ** exponent_index)) % (factor ** exponent)
-            current = (current * pow(base, partial_exponent * (factor ** exponent_index), prime)) % prime
-        results.append(partial_result)
+    for prime_factor, exp_power in prime_factors.items():
+        mod_exponent = prime_factor ** exp_power
+        modular_x = 1
+        accumulated_x = 0
+        for degree in range(exp_power):
+            term = pow(exponent * pow(modular_x, -1, prime), phi // (prime_factor ** (degree + 1)), prime)
+            x_component = residue_table.get((prime_factor, term), 0)
+            accumulated_x += x_component * (prime_factor ** degree)
+            modular_x = (modular_x * pow(base, x_component * (prime_factor ** degree), prime)) % prime
+        x_results.append(accumulated_x % mod_exponent)
 
-    return chinese_remainder_theorem(results, base_powers)
+    return chinese_remainder_theorem(x_results, factor_exponents)
 
 if __name__ == "__main__":
-    a = 798831748718
-    b = 323490752685
-    p = 818066545501
+    a = 44573028072
+    b = 32221422123
+    p = 78624916757
 
     x = silver_pohlig_hellman(a, b, p)
     print(x)
