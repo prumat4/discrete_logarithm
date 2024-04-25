@@ -15,7 +15,7 @@ docker build -t app .
 docker run -it 
 ```
 3. **Run as simple python3 programm**
-Use --test flag to run tests
 ```
 python3 discrete_logarithm.pt --tests
 ```
+Use --test flag to run tests, but in this case u have to pull this: ```docker pull salo1d/nta_cp2_helper```
