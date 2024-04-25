@@ -1,5 +1,6 @@
-from sympy import factorint  
-import math
+from sympy import factorint
+import pexpect
+import time
 
 def brute_force(a, b, p): 
     x = 0
@@ -10,7 +11,7 @@ def brute_force(a, b, p):
             return x
 
         t = (t * a) % p
-        x = x + 1
+        x += 1
     
     return float('nan')
 
@@ -53,13 +54,49 @@ def silver_pohlig_hellman(base, exponent, prime):
 
     return chinese_remainder_theorem(x_results, factor_exponents)
 
-if __name__ == "__main__":
-    a = 44573028072
-    b = 32221422123
-    p = 78624916757
+def initiate_docker(digit_length):
+    child = pexpect.spawn("docker run -it salo1d/nta_cp2_helper:2.0")
+    child.expect("Enter prime number decimal digit length:")
+    child.sendline(str(digit_length))
+    return child
 
-    x = silver_pohlig_hellman(a, b, p)
-    print(x)
+def get_test_numbers(child):
+    child.expect("a = (\d+);")
+    a = int(child.match.group(1))
+    child.expect("b = (\d+);")
+    b = int(child.match.group(1))
+    child.expect("p = (\d+).")
+    p = int(child.match.group(1))
+    return a, b, p
 
-    x = brute_force(a, b, p)
-    print(x)
+def test_sph_algorithm(digit_length):
+    for i in range(2):  # Test twice
+        child = initiate_docker(digit_length)
+        a, b, p = get_test_numbers(child)
+        print(f"\nTesting SPH with a = {a}, b = {b}, p = {p}")
+
+        start_time = time.time()
+        x_sph = silver_pohlig_hellman(a, b, p)
+        sph_duration = time.time() - start_time
+        print(f"digit length: {digit_length}, task type: {i + 1}, SPH result: x = {x_sph} (took {sph_duration:.2f} seconds)")
+
+        child.close()
+
+def test_brute_force_algorithm(digit_length):
+    for i in range(2):  # Test twice
+        child = initiate_docker(digit_length)
+        a, b, p = get_test_numbers(child)
+        print(f"\nTesting Brute Force with a = {a}, b = {b}, p = {p}")
+
+        start_time = time.time()
+        x_bf = brute_force(a, b, p)
+        bf_duration = time.time() - start_time
+        print(f"digit length: {digit_length}, task type: {i + 1},  Brute Force result: x = {x_bf} (took {bf_duration:.2f} seconds)")
+
+        child.close()
+
+for digit_length in range(3, 18):  
+    test_sph_algorithm(digit_length)
+
+# for digit_length in range(3, 18):
+#     test_brute_force_algorithm(digit_length)
